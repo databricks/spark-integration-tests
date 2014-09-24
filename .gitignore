@@ -1,0 +1,11 @@
+*~
+*.#*
+*#*#
+*.swp
+*.ipr
+*.iml
+*.iws
+.idea/
+.idea_modules/
+target/
+.DS_STORE
