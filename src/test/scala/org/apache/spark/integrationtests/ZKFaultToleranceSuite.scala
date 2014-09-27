@@ -2,13 +2,13 @@ package org.apache.spark.integrationtests
 
 
 import org.apache.spark.deploy.master.RecoveryState
-import org.apache.spark.integrationtests.docker.{ZooKeeperMaster, SparkWorker, SparkMaster, Docker}
+import org.apache.spark.integrationtests.docker.containers.spark.ZooKeeperHASparkStandaloneCluster
+import org.apache.spark.integrationtests.docker.{ZooKeeperMaster, Docker}
 import org.apache.spark.{Logging, SparkConf, SparkContext}
 import org.scalatest.{Failed, Matchers, FunSuite}
 import org.scalatest.concurrent.Eventually._
 import org.scalatest.concurrent.Timeouts._
 
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -17,88 +17,16 @@ import scala.language.postfixOps
  */
 class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
 
-  var cluster: HASparkCluster = _
+  var cluster: ZooKeeperHASparkStandaloneCluster = _
+  var zookeeper: ZooKeeperMaster = _
   var sc: SparkContext = _
 
-  class HASparkCluster {
-    val zookeeper: ZooKeeperMaster = new ZooKeeperMaster()
-    val sparkEnv = Seq(
-      "SPARK_DAEMON_JAVA_OPTS" -> ("-Dspark.deploy.recoveryMode=ZOOKEEPER " +
-                                  s"-Dspark.deploy.zookeeper.url=${zookeeper.zookeeperUrl}")
-    )
-    val conf: SparkConf = new SparkConf()
-    conf.set("spark.executor.memory", "512m")
-    val masters = ListBuffer[SparkMaster]()
-    val workers = ListBuffer[SparkWorker]()
-
-    def addMasters(num: Int) {
-      logInfo(s">>>>> ADD MASTERS $num <<<<<")
-      (1 to num).foreach { _ => masters += new SparkMaster(conf, sparkEnv) }
-      masters.foreach(_.waitForUI(10000))
-    }
-
-    def getMasterUrl(): String = {
-      "spark://" + masters.map(_.masterUrl.stripPrefix("spark://")).mkString(",")
-    }
-
-    def addWorkers(num: Int){
-      logInfo(s">>>>> ADD WORKERS $num <<<<<")
-      val masterUrl = getMasterUrl()
-      (1 to num).foreach { _ => workers += new SparkWorker(conf, sparkEnv, masterUrl) }
-      workers.foreach(_.waitForUI(10000))
-    }
-
-    def updateState() = {
-      masters.foreach(_.updateState())
-    }
-
-    def createSparkContext(): SparkContext = {
-      // Counter-hack: Because of a hack in SparkEnv#create() that changes this
-      // property, we need to reset it.
-      System.setProperty("spark.driver.port", "0")
-      new SparkContext(getMasterUrl(), "fault-tolerance", conf)
-    }
-
-    def killLeader() {
-      logInfo(">>>>> KILL LEADER <<<<<")
-      val leader = getLeader()
-      masters -= leader
-      leader.kill()
-    }
-
-    def getLeader(): SparkMaster = {
-      val leaders = masters.filter(_.state == RecoveryState.ALIVE)
-      assert(leaders.size === 1)
-      leaders.head
-    }
-
-    def killAll() {
-      zookeeper.kill()
-      masters.foreach(_.kill())
-      workers.foreach(_.kill())
-    }
-
-    def printLogs() = {
-      def separator() = println((1 to 79).map(_ => "-").mkString)
-      masters.foreach { master =>
-        separator()
-        println(s"Master ${master.container.id} log")
-        separator()
-        println(master.container.getLogs())
-        println()
-      }
-      workers.foreach { worker =>
-        separator()
-        println(s"Worker ${worker.container.id} log")
-        separator()
-        println(worker.container.getLogs())
-        println()
-      }
-    }
-  }
+  val conf: SparkConf = new SparkConf()
+  conf.set("spark.executor.memory", "512m")
 
   override def withFixture(test: NoArgTest) = {
-    cluster = new HASparkCluster
+    zookeeper = new ZooKeeperMaster()
+    cluster = new ZooKeeperHASparkStandaloneCluster(zookeeper)
     println(s"STARTING TEST ${test.name}")
     try {
       super.withFixture(test) match {
@@ -122,7 +50,7 @@ class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
    * Asserts that the cluster is usable and that the expected masters and workers
    * are all alive in a proper configuration (e.g., only one leader).
    */
-  def assertValidClusterState(cluster: HASparkCluster) = {
+  def assertValidClusterState(cluster: ZooKeeperHASparkStandaloneCluster) = {
     logInfo(">>>>> ASSERT VALID CLUSTER STATE <<<<<")
 
     // Check that the cluster is usable (tests client retry logic, so this may take a long

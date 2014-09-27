@@ -1,5 +1,6 @@
 package org.apache.spark.integrationtests.docker
 
+import org.apache.spark.integrationtests.docker.containers.spark.{SparkMaster, SparkWorker}
 import org.scalatest.concurrent.Timeouts
 import org.scalatest.{BeforeAndAfterEach, FunSuite, Matchers}
 
