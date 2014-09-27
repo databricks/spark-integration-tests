@@ -21,12 +21,11 @@ class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
   var zookeeper: ZooKeeperMaster = _
   var sc: SparkContext = _
 
-  val conf: SparkConf = new SparkConf()
-  conf.set("spark.executor.memory", "512m")
-
   override def withFixture(test: NoArgTest) = {
     zookeeper = new ZooKeeperMaster()
-    cluster = new ZooKeeperHASparkStandaloneCluster(zookeeper)
+    val conf = new SparkConf()
+    conf.set("spark.worker.timeout", "10")
+    cluster = new ZooKeeperHASparkStandaloneCluster(conf, zookeeper)
     println(s"STARTING TEST ${test.name}")
     try {
       super.withFixture(test) match {
@@ -42,6 +41,7 @@ class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
         sc = null
       }
       cluster.killAll()
+      zookeeper.kill()
       Docker.killAllLaunchedContainers()
     }
   }

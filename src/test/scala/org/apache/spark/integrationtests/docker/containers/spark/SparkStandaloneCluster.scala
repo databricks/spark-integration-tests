@@ -104,12 +104,12 @@ class SparkWorker(conf: SparkConf,
 }
 
 
-class SparkStandaloneCluster extends Logging {
+class SparkStandaloneCluster(baseConf: SparkConf) extends Logging {
   val masters = ListBuffer[SparkMaster]()
   val workers = ListBuffer[SparkWorker]()
 
   def getSparkConf: SparkConf = {
-    new SparkConf()
+    baseConf.clone
   }
 
   def getSparkEnv: Seq[(String, String)] = {
@@ -170,7 +170,8 @@ class SparkStandaloneCluster extends Logging {
 }
 
 
-class ZooKeeperHASparkStandaloneCluster(zookeeper: ZooKeeperMaster) extends SparkStandaloneCluster {
+class ZooKeeperHASparkStandaloneCluster(baseConf: SparkConf, zookeeper: ZooKeeperMaster)
+  extends SparkStandaloneCluster(baseConf) {
 
   override def getSparkEnv = {
     super.getSparkEnv ++ Seq(
@@ -196,7 +197,7 @@ class ZooKeeperHASparkStandaloneCluster(zookeeper: ZooKeeperMaster) extends Spar
 
 object SparkClusters {
   def createStandaloneCluster(numWorkers: Int): SparkStandaloneCluster = {
-    val cluster = new SparkStandaloneCluster()
+    val cluster = new SparkStandaloneCluster(new SparkConf())
     cluster.addMasters(1)
     cluster.addWorkers(numWorkers)
     cluster
