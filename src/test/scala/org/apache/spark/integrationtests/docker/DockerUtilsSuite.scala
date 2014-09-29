@@ -23,18 +23,17 @@ class DockerUtilsSuite extends FunSuite with BeforeAndAfterEach with Matchers wi
   test("basic spark cluster") {
     val conf = new SparkConf()
     // Start a master
-    val master = new SparkMaster(conf, Seq.empty)
+    val master = new SparkMaster(Seq.empty)
     master.waitForUI(10000)
-    master.updateState()
-    assert(master.numLiveApps === 0)
-    assert(master.state === RecoveryState.ALIVE)
-    assert(master.liveWorkerIPs.isEmpty)
+    val masterState = master.getUpdatedState
+    assert(masterState.numLiveApps === 0)
+    assert(masterState.state === RecoveryState.ALIVE)
+    assert(masterState.liveWorkerIPs.isEmpty)
 
     // Add a worker
-    val worker = new SparkWorker(conf, Seq.empty, master.masterUrl)
+    val worker = new SparkWorker(Seq.empty, master.masterUrl)
     worker.waitForUI(10000)
-    master.updateState()
-    master.liveWorkerIPs should be (Seq(worker.container.ip))
+    master.getUpdatedState.liveWorkerIPs should be (Seq(worker.container.ip))
 
     worker.kill()
     master.kill()

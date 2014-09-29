@@ -20,12 +20,13 @@ class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
   var cluster: ZooKeeperHASparkStandaloneCluster = _
   var zookeeper: ZooKeeperMaster = _
   var sc: SparkContext = _
+  var conf: SparkConf = _
 
   override def withFixture(test: NoArgTest) = {
     zookeeper = new ZooKeeperMaster()
-    val conf = new SparkConf()
+    conf = new SparkConf()
     conf.set("spark.worker.timeout", "10")
-    cluster = new ZooKeeperHASparkStandaloneCluster(conf, zookeeper)
+    cluster = new ZooKeeperHASparkStandaloneCluster(Seq.empty, zookeeper)
     println(s"STARTING TEST ${test.name}")
     try {
       super.withFixture(test) match {
@@ -62,17 +63,18 @@ class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
 
     // Check that the cluster eventually reaches a valid state:
     eventually (timeout(120 seconds), interval(1 seconds)) {
-      cluster.updateState()
       logDebug("Checking for valid cluster state")
       // There should only be one leader
-      val (leaders, nonLeaders) = cluster.masters.partition(_.state == RecoveryState.ALIVE)
+      val mastersWithStates = cluster.masters.map(m => (m, m.getUpdatedState))
+      val (leaders, nonLeaders) = mastersWithStates.partition(_._2.state == RecoveryState.ALIVE)
       leaders.size should be (1)
+      val leaderState = leaders.head._2
       // Any master that is not the leader should be in STANDBY mode:
-      nonLeaders.map(_.state).toSet should (be (Set()) or be (Set(RecoveryState.STANDBY)))
+      nonLeaders.map(_._2.state).toSet should (be (Set()) or be (Set(RecoveryState.STANDBY)))
       // The workers should be alive and registered with the leader:
-      cluster.workers.map(_.container.ip).toSet should be (cluster.getLeader().liveWorkerIPs.toSet)
+      cluster.workers.map(_.container.ip).toSet should be (leaderState.liveWorkerIPs.toSet)
       // At least one application / driver should be alive
-      cluster.getLeader().numLiveApps should be >= 1
+      leaderState.numLiveApps should be >= 1
     }
   }
 
@@ -81,35 +83,35 @@ class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
   test("sanity-basic") {
     cluster.addMasters(1)
     cluster.addWorkers(1)
-    sc = cluster.createSparkContext()
+    sc = cluster.createSparkContext(conf)
     assertValidClusterState(cluster)
   }
 
   test("sanity-many-masters") {
     cluster.addMasters(3)
     cluster.addWorkers(3)
-    sc = cluster.createSparkContext()
+    sc = cluster.createSparkContext(conf)
     assertValidClusterState(cluster)
   }
 
   test("single-master-halt") {
     cluster.addMasters(3)
     cluster.addWorkers(2)
-    sc = cluster.createSparkContext()
+    sc = cluster.createSparkContext(conf)
     assertValidClusterState(cluster)
 
     cluster.killLeader()
     delay(30 seconds)
     assertValidClusterState(cluster)
     sc.stop()
-    sc = cluster.createSparkContext()
+    sc = cluster.createSparkContext(conf)
     assertValidClusterState(cluster)
   }
 
   test("single-master-restart") {
     cluster.addMasters(1)
     cluster.addWorkers(2)
-    sc = cluster.createSparkContext()
+    sc = cluster.createSparkContext(conf)
     assertValidClusterState(cluster)
 
     cluster.killLeader()
@@ -126,7 +128,7 @@ class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
   test("cluster-failure") {
     cluster.addMasters(2)
     cluster.addWorkers(2)
-    sc = cluster.createSparkContext()
+    sc = cluster.createSparkContext(conf)
     assertValidClusterState(cluster)
 
     cluster.workers.foreach(_.kill())
@@ -141,7 +143,7 @@ class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
   test("all-but-standby-failure") {
     cluster.addMasters(2)
     cluster.addWorkers(2)
-    sc = cluster.createSparkContext()
+    sc = cluster.createSparkContext(conf)
     assertValidClusterState(cluster)
 
     cluster.killLeader()
@@ -159,7 +161,7 @@ class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
     delay()
     cluster.addMasters(1)
     cluster.addWorkers(2)
-    sc = cluster.createSparkContext()
+    sc = cluster.createSparkContext(conf)
     assertValidClusterState(cluster)
     assert(cluster.getLeader() === cluster.masters.head)
 

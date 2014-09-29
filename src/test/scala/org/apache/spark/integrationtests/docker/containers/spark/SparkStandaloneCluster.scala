@@ -12,7 +12,7 @@ import org.json4s.jackson.JsonMethods
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
-abstract class SparkStandaloneBase(conf: SparkConf, sparkEnv: Seq[(String, String)]) {
+abstract class SparkStandaloneBase(sparkEnv: Seq[(String, String)]) {
 
   private val sparkHome: String = {
     val sparkHome = System.getenv("SPARK_HOME")
@@ -28,10 +28,6 @@ abstract class SparkStandaloneBase(conf: SparkConf, sparkEnv: Seq[(String, Strin
     temp.deleteOnExit()
     temp
   }
-
-  // Save the SparkConf as spark-defaults.conf
-  Files.write(conf.getAll.map{ case (k, v) => k + ' ' + v }.mkString("\n"),
-    new File(confDir, "spark-defaults.conf"), Charset.forName("UTF-8"))
 
   // Setup the exports in spark-env.sh
   Files.write(sparkEnv.map{ case (k, v) => s"""export $k="$v""""}.mkString("\n"),
@@ -62,41 +58,46 @@ abstract class SparkStandaloneBase(conf: SparkConf, sparkEnv: Seq[(String, Strin
 }
 
 
-class SparkMaster(conf: SparkConf,
-                  sparkEnv: Seq[(String, String)]) extends SparkStandaloneBase(conf, sparkEnv) {
-  private implicit val formats = org.json4s.DefaultFormats
+class SparkMaster(sparkEnv: Seq[(String, String)]) extends SparkStandaloneBase(sparkEnv) {
 
   val container = Docker.launchContainer("spark-test-master", mountDirs = mountDirs)
 
-  var state: RecoveryState.Value = _
-  var liveWorkerIPs: Seq[String] = _
-  var numLiveApps = -1
-
   def masterUrl: String = s"spark://${container.ip}:7077"
 
-  def updateState(): Unit = {
+  case class SparkMasterState(state: RecoveryState.Value,
+                              liveWorkerIPs: Seq[String],
+                              numLiveApps: Int)
+
+  def getUpdatedState: SparkMasterState = {
+    implicit val formats = org.json4s.DefaultFormats
     val json =
       JsonMethods.parse(Source.fromURL(s"http://${container.ip}:8080/json").bufferedReader())
-    val workers = json \ "workers"
-    val liveWorkers = workers.children.filter(w => (w \ "state").extract[String] == "ALIVE")
-    // Extract the worker IP from "webuiaddress" (rather than "host") because the host name
-    // on containers is a weird hash instead of the actual IP address.
-    liveWorkerIPs = liveWorkers.map {
-      w => (w \ "webuiaddress").extract[String].stripPrefix("http://").stripSuffix(":8081")
+
+    val state = {
+      val status = json \\ "status"
+      val stateString = status.extract[String]
+      RecoveryState.values.filter(state => state.toString == stateString).head
     }
 
-    numLiveApps = (json \ "activeapps").children.size
+    val liveWorkerIPs = {
+      val workers = json \ "workers"
+      val liveWorkers = workers.children.filter(w => (w \ "state").extract[String] == "ALIVE")
+      // Extract the worker IP from "webuiaddress" (rather than "host") because the host name
+      // on containers is a weird hash instead of the actual IP address.
+      liveWorkers.map {
+        w => (w \ "webuiaddress").extract[String].stripPrefix("http://").stripSuffix(":8081")
+      }
+    }
 
-    val status = json \\ "status"
-    val stateString = status.extract[String]
-    state = RecoveryState.values.filter(state => state.toString == stateString).head
+    val numLiveApps = (json \ "activeapps").children.size
+
+    SparkMasterState(state, liveWorkerIPs, numLiveApps)
   }
 }
 
 
-class SparkWorker(conf: SparkConf,
-                  sparkEnv: Seq[(String, String)],
-                  masterUrl: String) extends SparkStandaloneBase(conf, sparkEnv) {
+class SparkWorker(sparkEnv: Seq[(String, String)],
+                  masterUrl: String) extends SparkStandaloneBase(sparkEnv) {
 
   val container = Docker.launchContainer("spark-test-worker",
     args = masterUrl, mountDirs = mountDirs)
@@ -104,41 +105,33 @@ class SparkWorker(conf: SparkConf,
 }
 
 
-class SparkStandaloneCluster(baseConf: SparkConf) extends Logging {
+class SparkStandaloneCluster(baseEnv: Seq[(String, String)]) extends Logging {
   val masters = ListBuffer[SparkMaster]()
   val workers = ListBuffer[SparkWorker]()
 
-  def getSparkConf: SparkConf = {
-    baseConf.clone
-  }
-
   def getSparkEnv: Seq[(String, String)] = {
-    Seq.empty
+    baseEnv
   }
 
   def addWorkers(num: Int){
     logInfo(s">>>>> ADD WORKERS $num <<<<<")
     val masterUrl = getMasterUrl()
-    (1 to num).foreach { _ => workers += new SparkWorker(getSparkConf, getSparkEnv, masterUrl) }
+    (1 to num).foreach { _ => workers += new SparkWorker(getSparkEnv, masterUrl) }
     workers.foreach(_.waitForUI(10000))
   }
 
 
   def addMasters(num: Int) {
     logInfo(s">>>>> ADD MASTERS $num <<<<<")
-    (1 to num).foreach { _ => masters += new SparkMaster(getSparkConf, getSparkEnv) }
+    (1 to num).foreach { _ => masters += new SparkMaster(getSparkEnv) }
     masters.foreach(_.waitForUI(10000))
   }
 
-  def createSparkContext(): SparkContext = {
+  def createSparkContext(conf: SparkConf, name: String ="spark-integration-tests"): SparkContext = {
     // Counter-hack: Because of a hack in SparkEnv#create() that changes this
     // property, we need to reset it.
     System.setProperty("spark.driver.port", "0")
-    new SparkContext(getMasterUrl(), "fault-tolerance", getSparkConf)
-  }
-
-  def updateState() = {
-    masters.foreach(_.updateState())
+    new SparkContext(getMasterUrl(), name, conf)
   }
 
   def getMasterUrl(): String = {
@@ -170,8 +163,8 @@ class SparkStandaloneCluster(baseConf: SparkConf) extends Logging {
 }
 
 
-class ZooKeeperHASparkStandaloneCluster(baseConf: SparkConf, zookeeper: ZooKeeperMaster)
-  extends SparkStandaloneCluster(baseConf) {
+class ZooKeeperHASparkStandaloneCluster(baseEnv: Seq[(String, String)], zookeeper: ZooKeeperMaster)
+  extends SparkStandaloneCluster(baseEnv) {
 
   override def getSparkEnv = {
     super.getSparkEnv ++ Seq(
@@ -188,7 +181,7 @@ class ZooKeeperHASparkStandaloneCluster(baseConf: SparkConf, zookeeper: ZooKeepe
   }
 
   def getLeader(): SparkMaster = {
-    val leaders = masters.filter(_.state == RecoveryState.ALIVE)
+    val leaders = masters.filter(_.getUpdatedState.state == RecoveryState.ALIVE)
     assert(leaders.size == 1)
     leaders.head
   }
@@ -196,8 +189,9 @@ class ZooKeeperHASparkStandaloneCluster(baseConf: SparkConf, zookeeper: ZooKeepe
 
 
 object SparkClusters {
-  def createStandaloneCluster(numWorkers: Int): SparkStandaloneCluster = {
-    val cluster = new SparkStandaloneCluster(new SparkConf())
+  def createStandaloneCluster(baseEnv: Seq[(String, String)],
+                              numWorkers: Int): SparkStandaloneCluster = {
+    val cluster = new SparkStandaloneCluster(baseEnv)
     cluster.addMasters(1)
     cluster.addWorkers(numWorkers)
     cluster
