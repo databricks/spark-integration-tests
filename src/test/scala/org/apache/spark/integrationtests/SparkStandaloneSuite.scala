@@ -4,24 +4,26 @@ import java.io.File
 import java.nio.charset.Charset
 
 import com.google.common.io.Files
-import org.apache.spark.{SparkConf, SparkContext, Logging}
-import org.apache.spark.integrationtests.docker.Docker
 import org.apache.spark.integrationtests.docker.containers.spark.{SparkClusters, SparkStandaloneCluster}
-import org.scalatest.{Failed, Matchers, FunSuite}
+import org.apache.spark.integrationtests.fixtures.{DockerFixture, SparkClusterFixture, SparkContextFixture}
+import org.apache.spark.{Logging, SparkConf}
 import org.scalatest.concurrent.Eventually._
-import scala.sys.process.Process
+import org.scalatest.{FunSuite, Matchers}
+
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.sys.process.Process
 
 
+class SparkStandaloneSuite extends FunSuite
+  with Matchers
+  with Logging
+  with DockerFixture
+  with SparkClusterFixture[SparkStandaloneCluster]
+  with SparkContextFixture {
 
-class SparkStandaloneSuite extends FunSuite with Matchers with Logging {
-
-  var cluster: SparkStandaloneCluster = _
-  var sc: SparkContext = _
-  var conf: SparkConf = _
-  var SPARK_HOME = sys.env.getOrElse("SPARK_HOME", throw new Exception("SPARK_HOME should be set"))
-  var EXAMPLES_JAR = {
+  val SPARK_HOME = sys.env.getOrElse("SPARK_HOME", throw new Exception("SPARK_HOME should be set"))
+  val EXAMPLES_JAR = {
     val examplesTargetDir = new File(SPARK_HOME, "examples/target/scala-2.10/")
     val jars = examplesTargetDir.listFiles().filter(_.getName.endsWith(".jar"))
       .filter(_.getName.startsWith("spark-examples_2.10"))
@@ -35,32 +37,10 @@ class SparkStandaloneSuite extends FunSuite with Matchers with Logging {
       Charset.forName("UTF-8"))
   }
 
-  override def withFixture(test: NoArgTest) = {
-    try {
-      conf = new SparkConf()
-      cluster = SparkClusters.createStandaloneCluster(Seq.empty, numWorkers = 1)
-      println(s"STARTING TEST ${test.name}")
-      super.withFixture(test) match {
-        case failed: Failed =>
-          println(s"TEST FAILED: ${test.name}; printing cluster logs")
-          cluster.printLogs()
-          failed
-        case other => other
-      }
-    } finally {
-      if (sc != null) {
-        sc.stop()
-        sc = null
-      }
-      if (cluster != null) {
-        cluster.killAll()
-      }
-      Docker.killAllLaunchedContainers()
-    }
-  }
-
   test("spark-submit with cluster mode with spark.driver.host set on submitter's machine") {
+    cluster = SparkClusters.createStandaloneCluster(Seq.empty, numWorkers = 1)
     val confFile = File.createTempFile("spark-defaults", ".conf")
+    val conf = new SparkConf()
     conf.set("spark.executor.memory", "256m")
     conf.set("spark.driver.host", "SOME-NONEXISTENT-HOST")
     saveSparkConf(conf, confFile)

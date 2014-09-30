@@ -1,8 +1,9 @@
-package org.apache.spark.integrationtests.docker
+package org.apache.spark.integrationtests.docker.containers.zookeeper
 
 import org.apache.curator.framework.CuratorFramework
 import org.apache.spark.SparkConf
 import org.apache.spark.deploy.master.SparkCuratorUtil
+import org.apache.spark.integrationtests.docker.Docker
 
 
 class ZooKeeperMaster {

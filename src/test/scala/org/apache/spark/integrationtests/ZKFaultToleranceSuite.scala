@@ -3,11 +3,12 @@ package org.apache.spark.integrationtests
 
 import org.apache.spark.deploy.master.RecoveryState
 import org.apache.spark.integrationtests.docker.containers.spark.ZooKeeperHASparkStandaloneCluster
-import org.apache.spark.integrationtests.docker.{ZooKeeperMaster, Docker}
-import org.apache.spark.{Logging, SparkConf, SparkContext}
-import org.scalatest.{Failed, Matchers, FunSuite}
+import org.apache.spark.integrationtests.docker.containers.zookeeper.ZooKeeperMaster
+import org.apache.spark.integrationtests.fixtures.{DockerFixture, SparkClusterFixture, SparkContextFixture, ZooKeeperFixture}
+import org.apache.spark.{Logging, SparkConf}
 import org.scalatest.concurrent.Eventually._
 import org.scalatest.concurrent.Timeouts._
+import org.scalatest.{BeforeAndAfterEach, FunSuite, Matchers}
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -15,40 +16,23 @@ import scala.language.postfixOps
 /**
  * This suite tests the fault-tolerance of the Spark standalone cluster manager and scheduler.
  */
-class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
+class ZKFaultToleranceSuite extends FunSuite
+  with BeforeAndAfterEach
+  with Matchers
+  with Logging
+  with DockerFixture
+  with ZooKeeperFixture
+  with SparkClusterFixture[ZooKeeperHASparkStandaloneCluster]
+  with SparkContextFixture {
 
-  var cluster: ZooKeeperHASparkStandaloneCluster = _
-  var zookeeper: ZooKeeperMaster = _
-  var sc: SparkContext = _
   var conf: SparkConf = _
 
-  override def withFixture(test: NoArgTest) = {
-    try {
-      zookeeper = new ZooKeeperMaster()
-      conf = new SparkConf()
-      conf.set("spark.worker.timeout", "10")
-      cluster = new ZooKeeperHASparkStandaloneCluster(Seq.empty, zookeeper)
-      println(s"STARTING TEST ${test.name}")
-      super.withFixture(test) match {
-        case failed: Failed =>
-          println(s"TEST FAILED: ${test.name}; printing cluster logs")
-          cluster.printLogs()
-          failed
-        case other => other
-      }
-    } finally {
-      if (sc != null) {
-        sc.stop()
-        sc = null
-      }
-      if (cluster != null) {
-        cluster.killAll()
-      }
-      if (zookeeper != null) {
-        zookeeper.kill()
-      }
-      Docker.killAllLaunchedContainers()
-    }
+  override def beforeEach() {
+    super.beforeEach()
+    conf = new SparkConf()
+    conf.set("spark.worker.timeout", "10")
+    zookeeper = new ZooKeeperMaster()
+    cluster = new ZooKeeperHASparkStandaloneCluster(Seq.empty, zookeeper)
   }
 
   /**

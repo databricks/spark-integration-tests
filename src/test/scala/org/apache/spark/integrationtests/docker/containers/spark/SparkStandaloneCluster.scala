@@ -4,9 +4,10 @@ import java.io.File
 import java.nio.charset.Charset
 
 import com.google.common.io.Files
+import org.apache.spark.integrationtests.docker.containers.zookeeper.ZooKeeperMaster
 import org.apache.spark.{Logging, SparkContext, SparkConf}
 import org.apache.spark.deploy.master.RecoveryState
-import org.apache.spark.integrationtests.docker.{ZooKeeperMaster, Docker, DockerContainer}
+import org.apache.spark.integrationtests.docker.{Docker, DockerContainer}
 import org.json4s.jackson.JsonMethods
 import scala.concurrent.duration._
 import scala.language.postfixOps
