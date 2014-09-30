@@ -32,6 +32,17 @@ object SparkIntegrationTestsBuild extends Build {
     "core"
   )
 
+
+  lazy val sparkStreaming = ProjectRef(
+    file(SPARK_HOME),
+    "streaming"
+  )
+
+  lazy val streamingKafka = ProjectRef(
+    file(SPARK_HOME),
+    "streaming-kafka"
+  )
+
   lazy val root = Project(
     "spark-integration-tests",
     file("."),
@@ -41,5 +52,5 @@ object SparkIntegrationTestsBuild extends Build {
         "org.scalatest" % "scalatest_2.10" % "2.2.1" % "test"
       )
     )
-  ).dependsOn(sparkCore)
+  ).dependsOn(sparkCore, sparkStreaming, streamingKafka)
 }
