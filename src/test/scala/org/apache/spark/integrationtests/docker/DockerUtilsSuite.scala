@@ -1,6 +1,5 @@
 package org.apache.spark.integrationtests.docker
 
-import org.apache.curator.framework.CuratorFramework
 import org.apache.spark.SparkConf
 import org.apache.spark.deploy.master.RecoveryState
 import org.apache.spark.integrationtests.docker.containers.spark.{SparkMaster, SparkWorker}
@@ -11,6 +10,8 @@ import org.scalatest.{FunSuite, Matchers}
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
+
+import resource._
 
 class DockerUtilsSuite extends FunSuite with DockerFixture with Matchers {
 
@@ -43,12 +44,8 @@ class DockerUtilsSuite extends FunSuite with DockerFixture with Matchers {
 
   test("basic zookeeper") {
     val zk = new ZooKeeperMaster()
-    var client: CuratorFramework = null
-    try {
-      client = zk.newCuratorFramework()
+    for (client <- managed(zk.newCuratorFramework())) {
       assert(client.getZookeeperClient.blockUntilConnectedOrTimedOut())
-    } finally {
-      client.close()
     }
   }
 }
