@@ -1,14 +1,15 @@
 package org.apache.spark.integrationtests.docker
 
 import org.apache.spark.integrationtests.docker.containers.spark.{SparkMaster, SparkWorker}
-import org.scalatest.concurrent.Timeouts
+import scala.concurrent.duration._
 import org.scalatest.{BeforeAndAfterEach, FunSuite, Matchers}
 
 import org.apache.curator.framework.CuratorFramework
 import org.apache.spark.SparkConf
 import org.apache.spark.deploy.master.RecoveryState
+import scala.language.postfixOps
 
-class DockerUtilsSuite extends FunSuite with BeforeAndAfterEach with Matchers with Timeouts {
+class DockerUtilsSuite extends FunSuite with BeforeAndAfterEach with Matchers {
 
   override def afterEach(): Unit = {
     Docker.killAllLaunchedContainers()
@@ -24,7 +25,7 @@ class DockerUtilsSuite extends FunSuite with BeforeAndAfterEach with Matchers wi
     val conf = new SparkConf()
     // Start a master
     val master = new SparkMaster(Seq.empty)
-    master.waitForUI(10000)
+    master.waitForUI(10 seconds)
     val masterState = master.getUpdatedState
     assert(masterState.numLiveApps === 0)
     assert(masterState.state === RecoveryState.ALIVE)
@@ -32,7 +33,7 @@ class DockerUtilsSuite extends FunSuite with BeforeAndAfterEach with Matchers wi
 
     // Add a worker
     val worker = new SparkWorker(Seq.empty, master.masterUrl)
-    worker.waitForUI(10000)
+    worker.waitForUI(10 seconds)
     master.getUpdatedState.liveWorkerIPs should be (Seq(worker.container.ip))
 
     worker.kill()

@@ -8,8 +8,11 @@ import org.apache.spark.{Logging, SparkContext, SparkConf}
 import org.apache.spark.deploy.master.RecoveryState
 import org.apache.spark.integrationtests.docker.{ZooKeeperMaster, Docker, DockerContainer}
 import org.json4s.jackson.JsonMethods
+import scala.concurrent.duration._
+import scala.language.postfixOps
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.Duration
 import scala.io.Source
 
 abstract class SparkStandaloneBase(sparkEnv: Seq[(String, String)]) {
@@ -39,17 +42,20 @@ abstract class SparkStandaloneBase(sparkEnv: Seq[(String, String)]) {
 
   val container: DockerContainer
 
-  def waitForUI(timeoutMillis: Int): Unit = {
+  val webUIPort = 8080
+
+  def waitForUI(timeout: Duration): Unit = {
     val start = System.currentTimeMillis()
-    while ((System.currentTimeMillis() - start) < timeoutMillis) {
+    while ((System.currentTimeMillis() - start) < timeout.toMillis) {
       try {
-        Source.fromURL(s"http://${container.ip}:8080/json")
+        Source.fromURL(s"http://${container.ip}:$webUIPort/json")
         return
       } catch {
         case ce: java.net.ConnectException =>
           Thread.sleep(100)
       }
     }
+    throw new IllegalStateException(s"Timed out after $timeout waiting for web UI")
   }
 
   def kill() {
@@ -66,7 +72,8 @@ class SparkMaster(sparkEnv: Seq[(String, String)]) extends SparkStandaloneBase(s
 
   case class SparkMasterState(state: RecoveryState.Value,
                               liveWorkerIPs: Seq[String],
-                              numLiveApps: Int)
+                              numLiveApps: Int,
+                              numCompletedApps: Int)
 
   def getUpdatedState: SparkMasterState = {
     implicit val formats = org.json4s.DefaultFormats
@@ -90,8 +97,9 @@ class SparkMaster(sparkEnv: Seq[(String, String)]) extends SparkStandaloneBase(s
     }
 
     val numLiveApps = (json \ "activeapps").children.size
+    val numCompletedApps = (json \ "completedapps").children.size
 
-    SparkMasterState(state, liveWorkerIPs, numLiveApps)
+    SparkMasterState(state, liveWorkerIPs, numLiveApps, numCompletedApps)
   }
 }
 
@@ -101,6 +109,10 @@ class SparkWorker(sparkEnv: Seq[(String, String)],
 
   val container = Docker.launchContainer("spark-test-worker",
     args = masterUrl, mountDirs = mountDirs)
+
+  // TODO: the default changed across Spark versions, AFAIK; detect this programatically
+  // (or configure it ourselves when launching the worker...)
+  override val webUIPort = 8081
 
 }
 
@@ -117,14 +129,14 @@ class SparkStandaloneCluster(baseEnv: Seq[(String, String)]) extends Logging {
     logInfo(s">>>>> ADD WORKERS $num <<<<<")
     val masterUrl = getMasterUrl()
     (1 to num).foreach { _ => workers += new SparkWorker(getSparkEnv, masterUrl) }
-    workers.foreach(_.waitForUI(10000))
+    workers.foreach(_.waitForUI(10 seconds))
   }
 
 
   def addMasters(num: Int) {
     logInfo(s">>>>> ADD MASTERS $num <<<<<")
     (1 to num).foreach { _ => masters += new SparkMaster(getSparkEnv) }
-    masters.foreach(_.waitForUI(10000))
+    masters.foreach(_.waitForUI(10 seconds))
   }
 
   def createSparkContext(conf: SparkConf, name: String ="spark-integration-tests"): SparkContext = {

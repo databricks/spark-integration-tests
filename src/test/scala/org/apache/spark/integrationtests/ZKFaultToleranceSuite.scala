@@ -23,12 +23,12 @@ class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
   var conf: SparkConf = _
 
   override def withFixture(test: NoArgTest) = {
-    zookeeper = new ZooKeeperMaster()
-    conf = new SparkConf()
-    conf.set("spark.worker.timeout", "10")
-    cluster = new ZooKeeperHASparkStandaloneCluster(Seq.empty, zookeeper)
-    println(s"STARTING TEST ${test.name}")
     try {
+      zookeeper = new ZooKeeperMaster()
+      conf = new SparkConf()
+      conf.set("spark.worker.timeout", "10")
+      cluster = new ZooKeeperHASparkStandaloneCluster(Seq.empty, zookeeper)
+      println(s"STARTING TEST ${test.name}")
       super.withFixture(test) match {
         case failed: Failed =>
           println(s"TEST FAILED: ${test.name}; printing cluster logs")
@@ -41,8 +41,12 @@ class ZKFaultToleranceSuite extends FunSuite with Matchers with Logging {
         sc.stop()
         sc = null
       }
-      cluster.killAll()
-      zookeeper.kill()
+      if (cluster != null) {
+        cluster.killAll()
+      }
+      if (zookeeper != null) {
+        zookeeper.kill()
+      }
       Docker.killAllLaunchedContainers()
     }
   }
