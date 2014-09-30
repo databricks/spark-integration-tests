@@ -78,7 +78,14 @@ class SparkStandaloneSuite extends FunSuite with Matchers with Logging {
     // more easily run regression-tests against older Spark versions:
     submitProcessBuilder.environment().clear()
     val sparkSubmitOutput = Process(submitProcessBuilder).!!
-    Thread.sleep(100000)
+    val driverId = {
+      val driverIdRegex = """driver-\d+-\d+""".r
+      driverIdRegex findFirstIn sparkSubmitOutput match {
+        case Some(id) => id
+        case None => fail(s"Couldn't parse driver id from spark submit output:\n$sparkSubmitOutput")
+      }
+    }
+    println(s"Launched driver with id $driverId")
     assert(!sparkSubmitOutput.contains("FAILED"))
     cluster.masters.head.getUpdatedState.numLiveApps should (be (0) or be(1))
     eventually(timeout(60 seconds), interval(1 seconds)) {
