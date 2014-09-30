@@ -2,6 +2,7 @@ package org.apache.spark.integrationtests.docker.containers.spark
 
 import java.io.File
 import java.nio.charset.Charset
+import java.util.concurrent.TimeoutException
 
 import com.google.common.io.Files
 import org.apache.spark.integrationtests.docker.containers.zookeeper.ZooKeeperMaster
@@ -56,7 +57,7 @@ abstract class SparkStandaloneBase(sparkEnv: Seq[(String, String)]) {
           Thread.sleep(100)
       }
     }
-    throw new IllegalStateException(s"Timed out after $timeout waiting for web UI")
+    throw new TimeoutException(s"Timed out after $timeout waiting for web UI")
   }
 
   def kill() {

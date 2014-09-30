@@ -50,7 +50,8 @@ object SparkIntegrationTestsBuild extends Build {
       scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"),
       libraryDependencies ++= Seq(
         "com.jsuereth" %% "scala-arm" % "1.4",
-        "org.scalatest" % "scalatest_2.10" % "2.2.1" % "test"
+        "org.scalatest" % "scalatest_2.10" % "2.2.1" % "test",
+        "net.sf.jopt-simple" % "jopt-simple" % "3.2" % "test"  // needed by Kafka, excluded by Spark
       )
     )
   ).dependsOn(sparkCore, sparkStreaming, streamingKafka)

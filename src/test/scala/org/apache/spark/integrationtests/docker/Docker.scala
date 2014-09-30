@@ -17,13 +17,25 @@ object Docker extends Logging {
     runningDockerContainers.foreach(kill)
   }
 
+  /**
+   * Launch a docker container.
+   *
+   * @param imageTag    the container image
+   * @param args        arguments to pass to the container's default command (e.g. spark master url)
+   * @param dockerArgs  arguments to pass to `docker` to control the container configuration
+   * @param mountDirs   List of (localDirectory, containerDirectory) pairs for mounting directories
+   *                    in container.
+   * @return            A `DockerContainer` handle for interacting with the launched container.
+   */
   def launchContainer(imageTag: String,
                       args: String = "",
+                      dockerArgs: String = "",
                       mountDirs: Seq[(String, String)] = Seq.empty): DockerContainer = {
     val mountCmd = mountDirs.map{ case (s, t) => s"-v $s:$t" }.mkString(" ")
 
-    val id =
-      new DockerId("docker run --privileged -d %s %s %s".format(mountCmd, imageTag, args).!!.trim)
+    val dockerLaunchCommand = s"docker run --privileged -d $mountCmd $dockerArgs $imageTag $args"
+    logDebug(s"Docker launch command is $dockerLaunchCommand")
+    val id = new DockerId(dockerLaunchCommand.!!.trim)
     registerContainer(id)
     try {
       new DockerContainer(id)
