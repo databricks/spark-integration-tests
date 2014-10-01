@@ -11,16 +11,26 @@ import org.apache.spark.Logging
 class KafkaClient(zookeeperUrl: String) extends AutoCloseable with Logging {
   private val zkClient = new ZkClient(zookeeperUrl)
 
+  type BrokerId = Int
+
   def createTopic(topic: String, numPartitions: Int, replicationFactor: Int) {
-    CreateTopicCommand.createTopic(zkClient, topic, numPartitions, replicationFactor)
+    CreateTopicCommand.createTopic(zkClient, topic, numPartitions, replicationFactor, "0")
   }
 
   def topics: Seq[String] = {
     ZkUtils.getAllTopics(zkClient)
   }
 
-  def brokers: Seq[Int] = {
+  def brokers: Seq[BrokerId] = {
     ZkUtils.getChildren(zkClient, ZkUtils.BrokerIdsPath).map(_.toInt).sorted
+  }
+
+  def replicasForPartition(topic: String, partition: Int): Seq[BrokerId] = {
+    ZkUtils.getReplicasForPartition(zkClient, topic, partition)
+  }
+
+  def leaderForPartition(topic: String, partition: Int): Option[BrokerId] = {
+    ZkUtils.getLeaderForPartition(zkClient, topic, partition)
   }
 
   override def close() {
