@@ -13,7 +13,7 @@ class KafkaBroker(zookeeper: ZooKeeperMaster, val brokerId: Int, val port: Int) 
       s"-e BROKER_ID=$brokerId",
       s"-e PORT=$port"
     ).mkString(" ")
-    Docker.launchContainer("wurstmeister/kafka:0.8.1", dockerArgs=args)
+    Docker.launchContainer("spark-kafka-0.8", dockerArgs=args)
   }
 
   val brokerAddr: String = container.ip + ":" + port
