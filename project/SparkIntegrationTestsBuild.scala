@@ -14,7 +14,9 @@ object BuildSettings {
       Resolver.sonatypeRepo("releases"),
       Resolver.typesafeRepo("releases")
     ),
-    parallelExecution in Test := false
+    parallelExecution in Test := false,
+    // This fork avoids "Native Library already loaded in another classloader" errors:
+    fork in Test := true
   )
 }
 

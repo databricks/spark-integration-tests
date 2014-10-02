@@ -53,7 +53,7 @@ class ZKFaultToleranceSuite extends FunSuite
     eventually (timeout(120 seconds), interval(1 seconds)) {
       logDebug("Checking for valid cluster state")
       // There should only be one leader
-      val mastersWithStates = cluster.masters.map(m => (m, m.getUpdatedState))
+      val mastersWithStates = cluster.masters.map(m => (m, m.getState))
       val (leaders, nonLeaders) = mastersWithStates.partition(_._2.state == RecoveryState.ALIVE)
       leaders.size should be (1)
       val leaderState = leaders.head._2

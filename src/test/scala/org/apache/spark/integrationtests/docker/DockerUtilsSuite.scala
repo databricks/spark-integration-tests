@@ -3,6 +3,7 @@ package org.apache.spark.integrationtests.docker
 import org.apache.spark.SparkConf
 import org.apache.spark.deploy.master.RecoveryState
 import org.apache.spark.integrationtests.docker.containers.kafka.KafkaBroker
+import org.apache.spark.integrationtests.docker.containers.mesos.{MesosSlave, MesosMaster}
 import org.apache.spark.integrationtests.docker.containers.spark.{SparkMaster, SparkWorker}
 import org.apache.spark.integrationtests.docker.containers.zookeeper.ZooKeeperMaster
 import org.apache.spark.integrationtests.fixtures.DockerFixture
@@ -28,7 +29,7 @@ class DockerUtilsSuite extends FunSuite with DockerFixture with Matchers {
     // Start a master
     val master = new SparkMaster(Seq.empty)
     master.waitForUI(10 seconds)
-    val masterState = master.getUpdatedState
+    val masterState = master.getState
     assert(masterState.numLiveApps === 0)
     assert(masterState.state === RecoveryState.ALIVE)
     assert(masterState.liveWorkerIPs.isEmpty)
@@ -37,7 +38,7 @@ class DockerUtilsSuite extends FunSuite with DockerFixture with Matchers {
     val worker = new SparkWorker(Seq.empty, master.masterUrl)
     worker.waitForUI(10 seconds)
     eventually(timeout(10 seconds)) {
-      master.getUpdatedState.liveWorkerIPs should be (Seq(worker.container.ip))
+      master.getState.liveWorkerIPs should be (Seq(worker.container.ip))
     }
 
     worker.kill()
@@ -71,6 +72,15 @@ class DockerUtilsSuite extends FunSuite with DockerFixture with Matchers {
       }
       // Try sending messages to the broker:
       producer.send((1 to 10000).map(m => ("test-topic", m.toString)))
+    }
+  }
+
+  test("basic mesos") {
+    val zk = new ZooKeeperMaster()
+    val mesosMaster = new MesosMaster(zk)
+    val mesosSlave = new MesosSlave(zk)
+    eventually(timeout(10 seconds)) {
+      mesosMaster.getState.activatedSlaves should be (1)
     }
   }
 }

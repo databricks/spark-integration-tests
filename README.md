@@ -12,6 +12,20 @@ In addition to having Docker, this test suite requires that
 - The docker images tagged `spark-test-master` and `spark-test-worker` have been built from the `docker/` directory. Run `docker/spark-test/build` to generate these.
 - The `SPARK_HOME` environment variable should to a Spark source checkout where an assembly has been built; this directory will be shared with Docker containers.  Additionally, this Spark sbt project will added as a dependency of this sbt project.
 
+### Requirements for Mesos tests
+
+The Mesos integration tests require `MESOS_NATIVE_LIBRARY` to be set.  For Mac users, the easiest way to install Mesos is through Homebrew:
+
+```
+brew install mesos
+```
+
+then
+
+```
+export MESOS_NATIVE_LIBRARY=$(brew --repository)/lib/libmesos.dylib
+```
+
 ## Running the tests
 
 These integration tests are implemented as ScalaTest suites and can be run through sbt.  Note that you will probably need to give sbt extra memory; with newer versions of the sbt launcher script, this can be done with the `-mem` option, e.g.

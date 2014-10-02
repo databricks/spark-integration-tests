@@ -26,8 +26,9 @@ abstract class SparkStandaloneBase(sparkEnv: Seq[(String, String)]) {
   }
 
   private val confDir = {
-    val temp = File.createTempFile("spark-home-temp", "",
-      new File(sparkHome, "integration-tests/target/"))
+    val parent = new File(sparkHome, "integration-tests/target/")
+    parent.mkdirs()
+    val temp = File.createTempFile("spark-home-temp", "", parent)
     temp.delete()
     temp.mkdir()
     temp.deleteOnExit()
@@ -77,7 +78,7 @@ class SparkMaster(sparkEnv: Seq[(String, String)]) extends SparkStandaloneBase(s
                               numLiveApps: Int,
                               numCompletedApps: Int)
 
-  def getUpdatedState: SparkMasterState = {
+  def getState: SparkMasterState = {
     implicit val formats = org.json4s.DefaultFormats
     val json =
       JsonMethods.parse(Source.fromURL(s"http://${container.ip}:8080/json").bufferedReader())
@@ -195,7 +196,7 @@ class ZooKeeperHASparkStandaloneCluster(baseEnv: Seq[(String, String)], zookeepe
   }
 
   def getLeader(): SparkMaster = {
-    val leaders = masters.filter(_.getUpdatedState.state == RecoveryState.ALIVE)
+    val leaders = masters.filter(_.getState.state == RecoveryState.ALIVE)
     assert(leaders.size == 1)
     leaders.head
   }

@@ -67,10 +67,10 @@ class SparkStandaloneSuite extends FunSuite
     }
     println(s"Launched driver with id $driverId")
     assert(!sparkSubmitOutput.contains("FAILED"))
-    cluster.masters.head.getUpdatedState.numLiveApps should (be (0) or be(1))
+    cluster.masters.head.getState.numLiveApps should (be (0) or be(1))
     eventually(timeout(60 seconds), interval(1 seconds)) {
-      cluster.masters.head.getUpdatedState.numLiveApps should be (0)
-      cluster.masters.head.getUpdatedState.numCompletedApps should be (1)
+      cluster.masters.head.getState.numLiveApps should be (0)
+      cluster.masters.head.getState.numCompletedApps should be (1)
     }
   }
 }
