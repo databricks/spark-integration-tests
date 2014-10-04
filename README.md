@@ -85,7 +85,7 @@ Spark on Mesos requires a Spark binary distribution `.tgz` file.  To build this,
 These integration tests are implemented as ScalaTest suites and can be run through sbt.  Note that you will probably need to give sbt extra memory; with newer versions of the sbt launcher script, this can be done with the `-mem` option, e.g.
 
 ```
-sbt -mem 2048
+sbt -mem 2048 test:package "test-only org.apache.spark.integrationtests.MesosSuite"
 ```
 
 *Note:* Although our Docker-based test suites attempt to clean up the containers that they create, this cleanup may not be performed if the test runner's JVM exits abruptly.  To kill **all** Docker containers (including ones that may not have been launched by our tests), you can run `docker kill $(docker ps -q)`.
