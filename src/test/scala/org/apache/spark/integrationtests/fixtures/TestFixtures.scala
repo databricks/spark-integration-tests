@@ -1,9 +1,11 @@
 package org.apache.spark.integrationtests.fixtures
 
+import fr.janalyse.ssh.{SSH, SSHShell}
 import org.apache.spark.SparkContext
 import org.apache.spark.integrationtests.docker.Docker
 import org.apache.spark.integrationtests.docker.containers.spark.SparkStandaloneCluster
 import org.apache.spark.integrationtests.docker.containers.zookeeper.ZooKeeperMaster
+import org.apache.spark.integrationtests.docker.network.{IPTables, NetworkFaultInjector}
 import org.apache.spark.streaming.StreamingContext
 import org.scalatest.{Failed, Suite, SuiteMixin}
 
@@ -93,6 +95,34 @@ trait DockerFixture extends SuiteMixin { this: Suite =>
       super.withFixture(test)
     } finally {
       Docker.killAllLaunchedContainers()
+    }
+  }
+}
+
+trait NetworkFaultInjectorFixture extends SuiteMixin { this: Suite =>
+  private var ssh: SSH = _
+  private var sshShell: SSHShell = _
+  private var ipTables: IPTables = _
+  var networkFaultInjector: NetworkFaultInjector = _
+
+  abstract override def withFixture(test: NoArgTest) = {
+    try {
+      ssh = Docker.getHostSSHConnection
+      sshShell = new SSHShell()(ssh)
+      ipTables = IPTables(sshShell)
+      networkFaultInjector = NetworkFaultInjector(ipTables)
+      super.withFixture(test)
+    } finally {
+      Docker.killAllLaunchedContainers()
+      if (ipTables != null) {
+        ipTables.deleteAddedChains()
+      }
+      if (sshShell != null) {
+        sshShell.close()
+      }
+      if (ssh != null) {
+        ssh.close()
+      }
     }
   }
 }

@@ -5,7 +5,7 @@ import java.nio.charset.Charset
 
 import com.google.common.io.Files
 import org.apache.spark.integrationtests.docker.containers.spark.{SparkClusters, SparkStandaloneCluster}
-import org.apache.spark.integrationtests.fixtures.{DockerFixture, SparkClusterFixture, SparkContextFixture}
+import org.apache.spark.integrationtests.fixtures.{NetworkFaultInjectorFixture, DockerFixture, SparkClusterFixture, SparkContextFixture}
 import org.apache.spark.{Logging, SparkConf}
 import org.scalatest.concurrent.Eventually._
 import org.scalatest.{FunSuite, Matchers}
@@ -19,6 +19,7 @@ class SparkStandaloneSuite extends FunSuite
   with Matchers
   with Logging
   with DockerFixture
+  with NetworkFaultInjectorFixture
   with SparkClusterFixture[SparkStandaloneCluster]
   with SparkContextFixture {
 
@@ -72,5 +73,32 @@ class SparkStandaloneSuite extends FunSuite
       cluster.masters.head.getState.numLiveApps should be (0)
       cluster.masters.head.getState.numCompletedApps should be (1)
     }
+  }
+
+  test("workers should reconnect to master if disconnected due to transient network issues") {
+    // Regression test for SPARK-3736
+    val env = Seq(
+      "SPARK_MASTER_OPTS" -> "-Dspark.worker.timeout=2",
+      "SPARK_WORKER_OPTS" -> "-Dspark.worker.timeout=1 -Dspark.akka.timeout=1 -Dspark.akka.failure-detector.threshold=1 -Dspark.akka.heartbeat.interval=1"
+    )
+    cluster = SparkClusters.createStandaloneCluster(env, numWorkers = 1)
+    val master = cluster.masters.head
+    val worker = cluster.workers.head
+    master.getState.liveWorkerIPs.size should be (1)
+    println("Cluster launched with one worker")
+
+    networkFaultInjector.dropTraffic(master.container, worker.container)
+    networkFaultInjector.dropTraffic(worker.container, master.container)
+    eventually(timeout(30 seconds), interval(1 seconds)) {
+      master.getState.liveWorkerIPs.size should be (0)
+    }
+    Thread.sleep(10000)
+    println("Master shows that zero workers are registered after network connection fails")
+
+    networkFaultInjector.restore()
+    eventually(timeout(30 seconds), interval(1 seconds)) {
+      master.getState.liveWorkerIPs.size should be (1)
+    }
+    println("Master shows one worker after network connection is restored")
   }
 }

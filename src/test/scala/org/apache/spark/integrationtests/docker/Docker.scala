@@ -1,5 +1,6 @@
 package org.apache.spark.integrationtests.docker
 
+import fr.janalyse.ssh.{SSHShell, SSHOptions, SSH}
 import org.apache.spark.Logging
 
 import scala.collection.mutable
@@ -56,6 +57,11 @@ object Docker extends Logging {
   }
 
   def dockerHostIp: String = "172.17.42.1" // default docker host ip
+
+  def getHostSSHConnection: SSH = {
+    val key = "id_boot2docker"
+    SSH(SSHOptions(host = "localhost", username =  "docker", port = 2022, sshKeyFile = Some(key)))
+  }
 }
 
 class DockerId(val id: String) extends AnyVal {

@@ -12,7 +12,8 @@ object BuildSettings {
     resolvers ++= Seq(
       Resolver.sonatypeRepo("snapshots"),
       Resolver.sonatypeRepo("releases"),
-      Resolver.typesafeRepo("releases")
+      Resolver.typesafeRepo("releases"),
+      "JAnalyse Repository" at "http://www.janalyse.fr/repository/"
     ),
     parallelExecution in Test := false,
     // This fork avoids "Native Library already loaded in another classloader" errors:
@@ -52,6 +53,8 @@ object SparkIntegrationTestsBuild extends Build {
       scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"),
       libraryDependencies ++= Seq(
         "com.jsuereth" %% "scala-arm" % "1.4",
+        "fr.janalyse"   %% "janalyse-ssh" % "0.9.14",
+        "com.jcraft" % "jsch" % "0.1.51",
         "org.scalatest" % "scalatest_2.10" % "2.2.1" % "test",
         "net.sf.jopt-simple" % "jopt-simple" % "3.2" % "test"  // needed by Kafka, excluded by Spark
       )
