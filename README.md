@@ -57,7 +57,7 @@ to build our custom Docker images and download other images from the Docker repo
 
 ### Configure your environment
 
-**Quickstart**: Running `./init.sh` should perform environment setup automatically and will warn you about missing environment variables.
+**Quickstart**: Running `./init.sh` will perform environment sanity checking and tell you which shell exports to perform.
 
 **Details**:
 

@@ -38,14 +38,32 @@ if [ -z "$SPARK_HOME" ]; then
     exit 1
 else
     echogreen "Using SPARK_HOME: $SPARK_HOME"
-    assembly_count=$(ls -1 "$SPARK_HOME" | grep "spark-.*-bin-.*\.tgz" | wc -l)
-    if [[ $assembly_count -eq 0 ]]; then
+    binary_dist_count=$(ls -1 "$SPARK_HOME" | grep "spark-.*-bin-.*\.tgz" | wc -l)
+    if [[ $binary_dist_count -eq 0 ]]; then
         echoyellow "WARNING: Could not find .tgz Spark binary distribution in SPARK_HOME; will not be able to run Mesos tests!"
         echoyellow 'You can build this distribution by running `./make-distribution.sh --tgz` in the SPARK_HOME directory.'
-    elif [[ $assembly_count -gt 1 ]]; then
-        echored "ERROR: Found multiple binary distributions in $SPARK_HOME; will not be able to run Mesos tests!"
+    elif [[ $binary_dist_count -gt 1 ]]; then
+        echored "ERROR: Found multiple binary distributions in SPARK_HOME; will not be able to run Mesos tests!"
     else
-        echogreen "Found Spark binary distribution!"
+        echogreen "Found Spark binary distribution"
+    fi
+    examples_jar_count=$(ls -1 "$SPARK_HOME/examples/target/scala-2.10/" | grep "spark-examples_2.10.*\.jar" | wc -l)
+    if [[ $examples_jar_count -eq 0 ]]; then
+        echoyellow "WARNING: Could not find Spark examples JAR; will not be able to run SparkStandaloneSuite tests!"
+        echoyellow 'You can build this jar by running `sbt/sbt examples/package` in the SPARK_HOME directory'
+    elif [[ $examples_jar_count -gt 1 ]]; then
+        echored "ERROR: Found multiple binary Spark examples jars in SPARK_HOME; will not be able to run SparkStandaloneSuite tests!"
+    else
+        echogreen "Found Spark examples JAR"
+    fi
+    assembly_jar_count=$(ls -1 "$SPARK_HOME/assembly/target/scala-2.10/" | grep "spark-assembly.*hadoop.*\.jar" | wc -l)
+    if [[ $assembly_jar_count -eq 0 ]]; then
+        echoyellow "WARNING: Could not find Spark assembly JAR; will not be able to run tests that use spark-submit!"
+        echoyellow 'You can build this jar by running `sbt/sbt assembly` in the SPARK_HOME directory'
+    elif [[ $assembly_jar_count -gt 1 ]]; then
+        echored "ERROR: Found multiple binary assemblies in SPARK_HOME; will not be able to run tests that use spark-submit!"
+    else
+        echogreen "Found Spark assembly JAR"
     fi
 fi
 
@@ -81,5 +99,5 @@ echo export SPARK_INTEGRATION_TESTS_HOME="$FWDIR"
 if [ ! -z "$MESOS_NATIVE_LIBRARY" ]; then
     echo export MESOS_NATIVE_LIBRARY="$MESOS_NATIVE_LIBRARY"
 fi
-echo '# If using boot2docker (this only has to be done after machine / VM reboots):'
+echogreen '# If using boot2docker (this only has to be done after machine / VM reboots):'
 echo 'sudo route -n add 172.17.0.0/16 `boot2docker ip`'
