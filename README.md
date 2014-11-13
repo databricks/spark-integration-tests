@@ -57,6 +57,10 @@ to build our custom Docker images and download other images from the Docker repo
 
 ### Configure your environment
 
+**Quickstart**: Running `./init.sh` should perform environment setup automatically and will warn you about missing environment variables.
+
+**Details**:
+
 - The `SPARK_HOME` environment variable should to a Spark source checkout where an assembly has been built.  This directory will be shared with Docker containers; Spark workers and masters will use this `SPARK_HOME/work` as their work directory.  This effectively treats host machine's `SPARK_HOME` directory as a directory on a network-mounted filesystem.
 
   Additionally, this Spark sbt project will added as a dependency of this sbt project, so the integration test code will be compiled against that Spark version.
