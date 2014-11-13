@@ -6,7 +6,7 @@ This project contains [Docker](http://docker.com)-based integration tests for Sp
 
 ### Install Docker
 
-This project depends on Docker >= 1.2.0 (it may work with earlier versions, but this hasn't been tested).
+This project depends on Docker >= 1.3.0 (it may work with earlier versions, but this hasn't been tested).
 
 #### On Linux
 
@@ -15,24 +15,9 @@ Install Docker.  This test suite requires that Docker can run without `sudo` (se
 #### On OSX
 
 On OSX, these integration tests can be run using [boot2docker](https://github.com/boot2docker/boot2docker).
-First, [download `boot2docker`](https://github.com/boot2docker/boot2docker/releases), run the installer, then run `~/Applications/boot2docker` to perform some one-time setup (create the VM, etc.).
+First, [download `boot2docker`](https://github.com/boot2docker/boot2docker/releases), run the installer, then run `~/Applications/boot2docker` to perform some one-time setup (create the VM, etc.).  This project has been tested with `boot2docker` 1.3.0+.
 
 With `boot2docker`, the Docker containers will be run inside of a VirtualBox VM, which creates some difficulties for communication between the Mac host and the containers.  Follow these instructions to work around those issues:
-
-- **Shared volumes**: Our Docker tests rely on being able to mount directories from the Mac host inside of the Docker containers (we use this to share programaticaly-generated Spark configuration directories and the SPARK_HOME directory with the containers).
-
-  This doesn't work with `boot2docker` out of the box (see [boot2docker/534](https://github.com/boot2docker/boot2docker/pull/534) and [docker/7249](https://github.com/docker/docker/issues/7249) for context).
-  
-  [One workaround](https://gist.github.com/mmerickel/e213fbe7ec7728e4d043#bind-mounting-from-os-x-into-docker-containers) is to use a boot2docker VM that contains the VirtualBox Guest Additions and to mount `/Users` into the VM:
-  
-  ```
-  boot2docker down
-  curl http://static.dockerfiles.io/boot2docker-v1.2.0-virtualbox-guest-additions-v4.3.14.iso > ~/.boot2docker/boot2docker.iso
-  VBoxManage sharedfolder add boot2docker-vm -name home -hostpath /Users
-  boot2docker up
-  ``` 
-  
-  `boot2docker` merged [boot2docker/534](https://github.com/boot2docker/boot2docker/pull/534), so this workaround won't be required once `boot2docker` 1.3 or 1.2.1 are released.
    
 - **Network access**:  Our tests currently run the SparkContext from outside of the containers, so we need both host <-> container and container <-> container networking to work properly.  This is complicated by the fact that `boot2docker` runs the containers behind a NAT in VirtualBox.
 

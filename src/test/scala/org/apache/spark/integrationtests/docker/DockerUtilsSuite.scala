@@ -19,8 +19,10 @@ import resource._
 class DockerUtilsSuite extends FunSuite with DockerFixture with Matchers {
 
   test("basic container launching") {
-    val container = Docker.launchContainer("ubuntu:precise")
-    assert(container.ip !== "")
+    val container = Docker.launchContainer("ubuntu:precise", args="sleep 10")
+    eventually(timeout(10 seconds)) {
+      assert(container.ip !== "")
+    }
     container.kill()
   }
 

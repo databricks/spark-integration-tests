@@ -57,6 +57,7 @@ class MesosSuite extends FunSuite
       .setMaster(mesosMaster.url)
       .setAppName("MesosSuite")
       .set("spark.executor.uri", "/opt/shared-files/" + SPARK_DIST.getName)
+      .set("spark.executor.memory", "256m")
       .setJars(Seq(TEST_JAR.getAbsolutePath))
   }
 
