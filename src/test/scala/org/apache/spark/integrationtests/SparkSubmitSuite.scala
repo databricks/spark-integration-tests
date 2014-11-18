@@ -1,9 +1,9 @@
-package org.apache.spark.integrationtests.docker
+package org.apache.spark.integrationtests
 
 import java.io.File
 
 import org.apache.spark.integrationtests.docker.containers.spark.{SparkClusters, SparkStandaloneCluster}
-import org.apache.spark.integrationtests.fixtures.{NetworkFaultInjectorFixture, DockerFixture, SparkClusterFixture, SparkContextFixture}
+import org.apache.spark.integrationtests.fixtures.{DockerFixture, NetworkFaultInjectorFixture, SparkClusterFixture, SparkContextFixture}
 import org.apache.spark.integrationtests.utils.spark.SparkSubmitUtils
 import org.apache.spark.{Logging, SparkConf}
 import org.scalatest.concurrent.Eventually._
