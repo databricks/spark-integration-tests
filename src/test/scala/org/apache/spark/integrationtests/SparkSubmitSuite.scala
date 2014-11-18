@@ -3,7 +3,7 @@ package org.apache.spark.integrationtests
 import java.io.File
 
 import org.apache.spark.integrationtests.docker.containers.spark.{SparkClusters, SparkStandaloneCluster}
-import org.apache.spark.integrationtests.fixtures.{DockerFixture, NetworkFaultInjectorFixture, SparkClusterFixture, SparkContextFixture}
+import org.apache.spark.integrationtests.fixtures.{DockerFixture, SparkClusterFixture, SparkContextFixture}
 import org.apache.spark.integrationtests.utils.spark.SparkSubmitUtils
 import org.apache.spark.{Logging, SparkConf}
 import org.scalatest.concurrent.Eventually._
@@ -16,7 +16,6 @@ class SparkSubmitSuite extends FunSuite
   with Matchers
   with Logging
   with DockerFixture
-  with NetworkFaultInjectorFixture
   with SparkClusterFixture[SparkStandaloneCluster]
   with SparkContextFixture {
 

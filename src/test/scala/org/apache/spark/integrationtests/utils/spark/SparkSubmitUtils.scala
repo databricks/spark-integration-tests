@@ -1,9 +1,8 @@
 package org.apache.spark.integrationtests.utils.spark
 
-import java.io.{PrintWriter, ByteArrayOutputStream, File}
+import java.io.File
 import java.nio.charset.Charset
 
-import scala.sys.process.{ProcessLogger, Process}
 import scala.language.postfixOps
 
 import com.google.common.io.Files
@@ -43,17 +42,7 @@ object SparkSubmitUtils {
     // Let's keep this workaround in place even after SPARK-3734 is fixed in order to
     // more easily run regression-tests against older Spark versions:
     submitProcessBuilder.environment().clear()
-    val process = Process(submitProcessBuilder)
-    // See http://stackoverflow.com/a/15438493/590203
-    val stdout = new ByteArrayOutputStream
-    val stderr = new ByteArrayOutputStream
-    val stdoutWriter = new PrintWriter(stdout)
-    val stderrWriter = new PrintWriter(stderr)
-    val exitValue = process.!(ProcessLogger(stdoutWriter.println, stderrWriter.println))
-    stdoutWriter.close()
-    stderrWriter.close()
-    (exitValue, stdout.toString, stderr.toString)
-
+    ProcessUtils.runAndCaptureOutput(submitProcessBuilder)
   }
 
   private def saveSparkConfToTempFile(conf: SparkConf): File = {
