@@ -15,7 +15,7 @@ Install Docker.  This test suite requires that Docker can run without `sudo` (se
 #### On OSX
 
 On OSX, these integration tests can be run using [boot2docker](https://github.com/boot2docker/boot2docker).
-First, [download `boot2docker`](https://github.com/boot2docker/boot2docker/releases), run the installer, then run `~/Applications/boot2docker` to perform some one-time setup (create the VM, etc.).  This project has been tested with `boot2docker` 1.3.0+.
+First, [download `boot2docker`](https://github.com/boot2docker/osx-installer/releases/tag/v1.3.2), run the installer, then run `~/Applications/boot2docker` to perform some one-time setup (create the VM, etc.).  This project has been tested with `boot2docker` 1.3.0+.
 
 With `boot2docker`, the Docker containers will be run inside of a VirtualBox VM, which creates some difficulties for communication between the Mac host and the containers.  Follow these instructions to work around those issues:
    
