@@ -9,4 +9,4 @@ docker build -t spark-kafka-0.8 kafka
 # Install images from the Docker central repository:
 docker pull redjack/mesos-master
 docker pull redjack/mesos-slave
-docker pull jplock/zookeeper
+docker pull jplock/zookeeper:3.4.6

@@ -8,7 +8,7 @@ import org.apache.spark.integrationtests.docker.Docker
 
 class ZooKeeperMaster {
   // TODO: build our own ZooKeeper dockerfile
-  val container = Docker.launchContainer("jplock/zookeeper")
+  val container = Docker.launchContainer("jplock/zookeeper:3.4.6")
 
   val zookeeperUrl = s"${container.ip}:2181"
 
