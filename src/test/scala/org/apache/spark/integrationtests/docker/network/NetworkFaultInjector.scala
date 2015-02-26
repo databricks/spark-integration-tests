@@ -1,3 +1,19 @@
+/*
+ * Copyright 2015 Databricks Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.spark.integrationtests.docker.network
 
 import fr.janalyse.ssh.SSHShell
@@ -65,12 +81,13 @@ case class IPTables(shell: SSHShell) {
   import IPTables._
 
   /** Represents an `iptables` rule that is part of a chain */
-  case class Rule(chain: String,
-                  target: String,
-                  prot: String,
-                  opt: String,
-                  src: String,
-                  dest: String)
+  case class Rule(
+    chain: String,
+    target: String,
+    prot: String,
+    opt: String,
+    src: String,
+    dest: String)
 
   /** A list of chains that we've created, to facilitate automated cleanup */
   private val chains = mutable.Set[Chain]()

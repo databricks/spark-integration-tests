@@ -78,3 +78,7 @@ sbt -mem 2048 test:package "test-only org.apache.spark.integrationtests.MesosSui
 ```
 
 *Note:* Although our Docker-based test suites attempt to clean up the containers that they create, this cleanup may not be performed if the test runner's JVM exits abruptly.  To kill **all** Docker containers (including ones that may not have been launched by our tests), you can run `docker kill $(docker ps -q)`.
+
+## License
+
+This project is licensed under the Apache 2.0 License. See LICENSE for full license text.
