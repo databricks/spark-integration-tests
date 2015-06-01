@@ -17,7 +17,7 @@
 package org.apache.spark.integrationtests.docker
 
 import org.apache.spark.SparkConf
-import org.apache.spark.deploy.master.RecoveryState
+import org.apache.spark.deploy.master.{PublicRecoveryState => RecoveryState}
 import org.apache.spark.integrationtests.docker.containers.kafka.KafkaBroker
 import org.apache.spark.integrationtests.docker.containers.mesos.{MesosSlave, MesosMaster}
 import org.apache.spark.integrationtests.docker.containers.spark.{SparkMaster, SparkWorker}
