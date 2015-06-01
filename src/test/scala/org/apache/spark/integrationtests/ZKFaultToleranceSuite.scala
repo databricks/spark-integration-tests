@@ -16,8 +16,7 @@
 
 package org.apache.spark.integrationtests
 
-
-import org.apache.spark.deploy.master.RecoveryState
+import org.apache.spark.deploy.master.{PublicRecoveryState => RecoveryState}
 import org.apache.spark.integrationtests.docker.containers.spark.ZooKeeperHASparkStandaloneCluster
 import org.apache.spark.integrationtests.docker.containers.zookeeper.ZooKeeperMaster
 import org.apache.spark.integrationtests.fixtures.{DockerFixture, SparkClusterFixture, SparkContextFixture, ZooKeeperFixture}

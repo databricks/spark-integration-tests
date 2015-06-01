@@ -16,7 +16,7 @@
 
 package org.apache.spark.integrationtests.utils.kafka
 
-import kafka.admin.CreateTopicCommand
+import kafka.admin.AdminUtils
 import kafka.utils.{ZKStringSerializer, ZkUtils}
 import org.I0Itec.zkclient.ZkClient
 import org.apache.spark.Logging
@@ -34,7 +34,7 @@ class KafkaClient(zookeeperUrl: String) extends AutoCloseable with Logging {
   type BrokerId = Int
 
   def createTopic(topic: String, numPartitions: Int, replicationFactor: Int) {
-    CreateTopicCommand.createTopic(zkClient, topic, numPartitions, replicationFactor, "0")
+    AdminUtils.createTopic(zkClient, topic, numPartitions, replicationFactor)
   }
 
   def topics: Seq[String] = {
